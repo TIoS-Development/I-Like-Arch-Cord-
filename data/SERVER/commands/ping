@@ -1,0 +1,23 @@
+COMMAND_NAME = "ping"
+
+async def run(message, session, args):
+    NET = session.NET
+    if not args:
+        return "Usage: ping [-c count] <ip>"
+    count = 4
+    host = None
+    i = 0
+    while i < len(args):
+        if args[i] == "-c" and i+1 < len(args):
+            try: count = int(args[i+1])
+            except: pass
+            i += 2
+        else:
+            host = args[i]
+            i += 1
+    if not host:
+        return "ping: missing host"
+    target = NET._resolve_host(host)
+    if not target:
+        return f"ping: {host}: Name or service not known"
+    return NET.ping(target.NET.get_ip(), count)

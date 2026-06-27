@@ -1,0 +1,59 @@
+# DESC: create a new user account
+
+COMMAND_NAME = "useradd"
+
+import os, json, hashlib
+
+async def run(message, session, args):
+    OS = session.OS
+
+    if len(args) == 0:
+        return "Usage: useradd [options] username"
+
+    username = None
+    create_home = False
+    shell = "/bin/sh"
+    password = ""
+
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if a == "-m":
+            create_home = True
+        elif a == "-s" and i+1 < len(args):
+            shell = args[i+1]
+            i += 1
+        elif a == "-p" and i+1 < len(args):
+            password = args[i+1]
+            i += 1
+        else:
+            username = a
+        i += 1
+
+    if username is None:
+        return "useradd: missing username"
+
+    passwd_path = "/etc/passwd"
+    shadow_path = "/etc/shadow"
+
+    passwd = OS.read(passwd_path) or ""
+    for line in passwd.split("\n"):
+        if line.startswith(username + ":"):
+            return "useradd: user exists"
+
+    uid = abs(hash(username)) % 100000
+    gid = uid
+
+    entry = f"{username}:x:{uid}:{gid}:{username}:/home/{username}:{shell}\n"
+    OS.append(passwd_path, entry)
+
+    hashed = hashlib.sha256(password.encode()).hexdigest() if password else ""
+    OS.append(shadow_path, f"{username}:{hashed}\n")
+
+    if create_home:
+        home = f"/home/{username}"
+        OS.mkdir(home)
+        OS.mkdir(home + "/scripts")
+        OS.write(home + "/settings.json", json.dumps({"shell": shell}))
+
+    return f"Created user {username}"

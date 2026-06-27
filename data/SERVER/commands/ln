@@ -1,0 +1,30 @@
+# DESC: create hardlinks or symlinks between files
+
+COMMAND_NAME = "ln"
+
+import json
+
+async def run(message, session, args):
+    OS = session.OS
+    if len(args) < 2:
+        return "Usage: ln [-s] target linkname"
+    symbolic = False
+    i = 0
+    if args[0].startswith("-"):
+        if "s" in args[0]:
+            symbolic = True
+        i += 1
+    target = args[i]
+    linkname = args[i+1]
+    if not OS.exists(target):
+        return f"ln: target '{target}' not found"
+    links = OS.load_links()
+    if symbolic:
+        links[linkname] = {"type": "symlink", "target": target}
+        OS.save_links(links)
+        OS.write(linkname, "")
+        return ""
+    links[linkname] = {"type": "hard", "target": target}
+    OS.save_links(links)
+    OS.write(linkname, "")
+    return ""

@@ -1,0 +1,10 @@
+# DESC: update /usr/bin from the server's master command set (will delete everything in /usr/bin)
+
+COMMAND_NAME = "inst-os-latest"
+
+async def run(message, session, args):
+    OS = session.OS
+
+    result = OS.os_latest()
+
+    return result or "OS updated to latest version."

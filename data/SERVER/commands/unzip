@@ -1,0 +1,27 @@
+# DESC: extract ZIP archives
+
+COMMAND_NAME = "unzip"
+
+import base64
+import json
+
+async def run(message, session, args):
+    OS = session.OS
+
+    if len(args) < 1:
+        return "Usage: unzip archive"
+
+    archive = args[0]
+    raw = OS.read(archive)
+    if raw is None:
+        return f"unzip: {archive}: not found"
+
+    data = base64.b64decode(raw.encode())
+    pkg = json.loads(data.decode())
+
+    out = []
+    for path, content in pkg.items():
+        OS.write(path, content)
+        out.append(path)
+
+    return "\n".join(out)

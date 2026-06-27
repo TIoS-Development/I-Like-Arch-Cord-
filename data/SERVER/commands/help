@@ -1,0 +1,69 @@
+# DESC: shows command list with pagination
+COMMAND_NAME = "help"
+
+PAGE_SIZE = 5
+
+async def run(message, session, args):
+    OS = session.OS
+
+    try:
+        page = int(args[0]) if args else 1
+    except:
+        return "Invalid page number."
+
+    if page < 1:
+        page = 1
+
+    cmds = OS.listdir("/usr/bin")
+    cmds = [c for c in cmds if not c.startswith(".")]
+
+    help_entries = []
+
+    for cmd in cmds:
+        path = f"/usr/bin/{cmd}"
+        src = OS.read(path)
+        if not src:
+            continue
+
+        name = None
+        desc = None
+
+        for line in src.splitlines():
+            line = line.strip()
+
+            if line.startswith("COMMAND_NAME"):
+                try:
+                    name = line.split("=", 1)[1].strip().strip('"')
+                except:
+                    pass
+
+            if line.startswith("# DESC:"):
+                desc = line.replace("# DESC:", "").strip()
+
+            if name and desc:
+                break
+
+        if name:
+            help_entries.append((name, desc or "(no description)"))
+
+    help_entries.sort(key=lambda x: x[0])
+
+    total = len(help_entries)
+    pages = max(1, (total + PAGE_SIZE - 1) // PAGE_SIZE)
+
+    if page > pages:
+        return f"Page {page} does not exist. Max pages: {pages}"
+
+    start = (page - 1) * PAGE_SIZE
+    end = start + PAGE_SIZE
+    chunk = help_entries[start:end]
+
+    out = f"Help — Page {page}/{pages}\n"
+    out += "-------------------------\n"
+
+    for name, desc in chunk:
+        out += f"{name:<12} - {desc}\n"
+
+    out += "\nUse: help <page>\n"
+
+    return out

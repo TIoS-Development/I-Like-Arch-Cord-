@@ -1,0 +1,9 @@
+# DESC: print the current working directory
+
+COMMAND_NAME = "pwd"
+
+
+async def run(message, session, args):
+    OS = session.OS
+    cwd = OS.getCWD()
+    await message.channel.send(cwd)

@@ -1,0 +1,26 @@
+# DESC: change file permissions
+COMMAND_NAME = "chmod"
+
+async def run(message, session, args):
+    OS = session.OS
+
+    if len(args) < 2:
+        return "Usage: chmod <mode> <file>"
+
+    mode = args[0]
+    file = args[1]
+
+    if mode == "+x":
+        mode = "755"
+
+    if not mode.isdigit() or len(mode) != 3:
+        return "chmod: invalid mode"
+
+    vm_path = OS.normalize(file, session)
+
+    if not OS.exists(vm_path):
+        return f"chmod: cannot access '{file}': No such file"
+
+    OS.set_mode(vm_path, mode, session.user_id)
+
+    return ""

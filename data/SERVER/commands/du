@@ -1,0 +1,124 @@
+# DESC: du shows disk usage for files and directories.
+COMMAND_NAME = "du"
+
+import math
+
+async def run(message, session, args):
+    OS = session.OS
+
+    human = False
+    summarize = False
+    include_all = False
+    grand_total = False
+    max_depth = None
+    block_size = 1024
+
+    paths = []
+
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if a == "-h":
+            human = True
+        elif a == "-s":
+            summarize = True
+        elif a == "-a":
+            include_all = True
+        elif a == "-c":
+            grand_total = True
+        elif a == "-d" and i+1 < len(args):
+            try:
+                max_depth = int(args[i+1])
+            except:
+                max_depth = None
+            i += 1
+        elif a == "-B" and i+1 < len(args):
+            try:
+                block_size = int(args[i+1])
+            except:
+                block_size = 1024
+            i += 1
+        else:
+            paths.append(a)
+        i += 1
+
+    if not paths:
+        paths = [OS.getCWD()]
+
+    def size_of(path):
+        total = 0
+        stack = [path]
+        while stack:
+            p = stack.pop()
+            if OS.is_dir(p):
+                for name in OS.listdir(p):
+                    stack.append(OS.join(p, name))
+            else:
+                s = OS.size(p)
+                if s:
+                    total += s
+        return total
+
+    def fmt(n):
+        if not human:
+            return str(math.ceil(n / block_size))
+        for u in ["B","K","M","G","T"]:
+            if n < 1024:
+                return f"{n:.1f}{u}"
+            n /= 1024
+        return f"{n:.1f}P"
+
+    out = []
+    total_sum = 0
+
+    for p in paths:
+        p = OS.normalize(p)
+        if not p.startswith("/"):
+            p = OS.join(OS.getCWD(), p)
+        p = OS.normalize(p)
+
+        if not OS.exists(p):
+            out.append(f"du: cannot access '{p}'")
+            continue
+
+        if OS.is_file(p):
+            s = OS.size(p)
+            total_sum += s
+            out.append(f"{fmt(s)}\t{p}")
+            continue
+
+        if summarize:
+            s = size_of(p)
+            total_sum += s
+            out.append(f"{fmt(s)}\t{p}")
+            continue
+
+        base_depth = p.count("/")
+
+        stack = [p]
+        while stack:
+            cur = stack.pop()
+            depth = cur.count("/") - base_depth
+            if max_depth is not None and depth > max_depth:
+                continue
+
+            s = size_of(cur)
+            total_sum += s
+            out.append(f"{fmt(s)}\t{cur}")
+
+            if OS.is_dir(cur):
+                for name in OS.listdir(cur):
+                    stack.append(OS.join(cur, name))
+
+                if include_all:
+                    for name in OS.listdir(cur):
+                        fp = OS.join(cur, name)
+                        if OS.is_file(fp):
+                            fs = OS.size(fp)
+                            total_sum += fs
+                            out.append(f"{fmt(fs)}\t{fp}")
+
+    if grand_total:
+        out.append(f"{fmt(total_sum)}\ttotal")
+
+    return "\n".join(out)

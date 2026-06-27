@@ -1,0 +1,87 @@
+# DESC: modify an existing user account
+
+COMMAND_NAME = "usermod"
+
+import os, json, shutil
+
+async def run(message, session, args):
+    OS = session.OS
+
+    if len(args) < 2:
+        return "Usage: usermod [options] username"
+
+    username = args[-1]
+
+    passwd_path = "/etc/passwd"
+    shadow_path = "/etc/shadow"
+
+    passwd = OS.read(passwd_path) or ""
+    shadow = OS.read(shadow_path) or ""
+
+    lines = passwd.split("\n")
+    entry = None
+    idx = None
+
+    for i, line in enumerate(lines):
+        if line.startswith(username + ":"):
+            entry = line
+            idx = i
+            break
+
+    if entry is None:
+        return "usermod: user does not exist"
+
+    parts = entry.split(":")
+    old_user = parts[0]
+    old_uid = parts[2]
+    old_gid = parts[3]
+    old_home = parts[5]
+    old_shell = parts[6] if len(parts) > 6 else "/bin/sh"
+
+    new_user = old_user
+    new_uid = old_uid
+    new_gid = old_gid
+    new_home = old_home
+    new_shell = old_shell
+
+    i = 0
+    while i < len(args) - 1:
+        a = args[i]
+        if a == "-l" and i+1 < len(args):
+            new_user = args[i+1]
+            i += 1
+        elif a == "-u" and i+1 < len(args):
+            new_uid = args[i+1]
+            i += 1
+        elif a == "-g" and i+1 < len(args):
+            new_gid = args[i+1]
+            i += 1
+        elif a == "-d" and i+1 < len(args):
+            new_home = args[i+1]
+            i += 1
+        elif a == "-s" and i+1 < len(args):
+            new_shell = args[i+1]
+            i += 1
+        i += 1
+
+    if new_home != old_home:
+        try:
+            shutil.move(OS._real(old_home), OS._real(new_home))
+        except:
+            pass
+
+    new_entry = f"{new_user}:x:{new_uid}:{new_gid}:{new_user}:{new_home}:{new_shell}"
+    lines[idx] = new_entry
+    OS.write(passwd_path, "\n".join(lines))
+
+    shadow_lines = shadow.split("\n")
+    for i, line in enumerate(shadow_lines):
+        if line.startswith(old_user + ":"):
+            parts = line.split(":")
+            parts[0] = new_user
+            shadow_lines[i] = ":".join(parts)
+            break
+
+    OS.write(shadow_path, "\n".join(shadow_lines))
+
+    return f"Modified user {username}"

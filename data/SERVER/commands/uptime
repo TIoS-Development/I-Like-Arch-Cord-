@@ -1,0 +1,53 @@
+# DESC: show how long the system has been running
+
+COMMAND_NAME = "uptime"
+
+import time
+from datetime import datetime
+
+async def run(message, session, args):
+    OS = session.OS
+    PROC = session.PROC
+
+    pretty = False
+    since = False
+
+    for a in args:
+        if a == "-p":
+            pretty = True
+        elif a == "-s":
+            since = True
+
+    if not hasattr(session, "boot_time"):
+        session.boot_time = time.time()
+
+    now = time.time()
+    uptime_sec = int(now - session.boot_time)
+
+    days = uptime_sec // 86400
+    hours = (uptime_sec % 86400) // 3600
+    minutes = (uptime_sec % 3600) // 60
+
+    if since:
+        return datetime.fromtimestamp(session.boot_time).strftime("%Y-%m-%d %H:%M:%S")
+
+    if pretty:
+        parts = []
+        if days > 0:
+            parts.append(f"{days} days")
+        if hours > 0:
+            parts.append(f"{hours} hours")
+        if minutes > 0:
+            parts.append(f"{minutes} minutes")
+        return "up " + ", ".join(parts)
+
+    users = 1
+
+    active = len(PROC.list())
+    load1 = round(active * 0.60, 2)
+    load5 = round(active * 0.35, 2)
+    load15 = round(active * 0.20, 2)
+
+    t = datetime.now().strftime("%H:%M:%S")
+
+    return f"{t} up {days} days, {hours:02d}:{minutes:02d}, {users} user, load average: {load1}, {load5}, {load15}"

@@ -1,0 +1,112 @@
+# DESC: Opens a file and dumps its contents to terminal (auto file upload if too large)
+COMMAND_NAME = "cat"
+
+import io
+import discord
+
+async def run(message, session, args):
+    OS = session.OS
+
+    if not args:
+        return "cat: missing file operand"
+
+    number_all = False
+    number_nonempty = False
+    squeeze_blank = False
+    show_ends = False
+    show_tabs = False
+
+    paths = []
+    i = 0
+
+    while i < len(args):
+        a = args[i]
+
+        if a.startswith("-") and not a.startswith("--"):
+            for ch in a[1:]:
+                if ch == "n":
+                    number_all = True
+                elif ch == "b":
+                    number_nonempty = True
+                elif ch == "s":
+                    squeeze_blank = True
+                elif ch == "E":
+                    show_ends = True
+                elif ch == "T":
+                    show_tabs = True
+                else:
+                    return f"cat: invalid option -- '{ch}'"
+        else:
+            paths.append(a)
+
+        i += 1
+
+    if not paths:
+        return "cat: missing file operand"
+
+    last_blank = False
+    line_number = 1
+    final_output = []
+
+    for p in paths:
+        if not p.startswith("/"):
+            p = OS.join(OS.getCWD(), p)
+        p = OS.normalize(p)
+
+        if not OS.exists(p):
+            final_output.append(f"cat: {p}: No such file or directory")
+            continue
+
+        if OS.is_dir(p):
+            final_output.append(f"cat: {p}: Is a directory")
+            continue
+
+        try:
+            content = OS.read_file(p)
+        except Exception as e:
+            final_output.append(f"cat: {p}: {e}")
+            continue
+
+        lines = content.split("\n")
+
+        for line in lines:
+            is_blank = (line.strip() == "")
+
+            if squeeze_blank:
+                if is_blank and last_blank:
+                    continue
+                last_blank = is_blank
+
+            if show_tabs:
+                line = line.replace("\t", "^I")
+
+            if show_ends:
+                line = line + "$"
+
+            if number_nonempty and not is_blank:
+                final_output.append(f"{line_number:6d}\t{line}")
+                line_number += 1
+                continue
+
+            if number_all:
+                final_output.append(f"{line_number:6d}\t{line}")
+                line_number += 1
+                continue
+
+            final_output.append(line)
+
+    text = "\n".join(final_output)
+    if text.strip() == "":
+        return "​"
+
+    if len(text) > 1900:
+        file_bytes = io.BytesIO(text.encode("utf-8"))
+        filename = "cat_output.txt"
+
+        await message.channel.send(
+            content="Output too large, sending as file:",
+            file=discord.File(file_bytes, filename)
+        )
+        return ""
+
+    return text

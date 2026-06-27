@@ -1,0 +1,38 @@
+# DESC: Changes group permissions on files
+COMMAND_NAME = "chown"
+
+async def run(message, session, args):
+    OS = session.OS
+
+    if len(args) < 2:
+        return "Usage: chown <owner>[:group] <file>"
+
+    owner_group = args[0]
+    target = args[1]
+
+
+    if not OS.exists(target):
+        return f"chown: cannot access '{target}': No such file"
+
+
+    if ":" in owner_group:
+        owner, group = owner_group.split(":", 1)
+    else:
+        owner = owner_group
+        group = None
+
+
+    owners = OS.get_owners()
+
+
+    owners[target] = {
+        "owner": owner,
+        "group": group
+    }
+
+    OS.save_owners(owners)
+
+    if group:
+        return f"Changed ownership of {target} to {owner}:{group}"
+    else:
+        return f"Changed ownership of {target} to {owner}"

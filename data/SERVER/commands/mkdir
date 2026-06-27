@@ -1,0 +1,50 @@
+# DESC: create a new directory
+
+COMMAND_NAME = "mkdir"
+
+async def run(message, session, args):
+    OS = session.OS
+
+    parents = False
+    verbose = False
+    mode = None
+
+    paths = []
+
+    for a in args:
+        if a in ("-p", "--parents"):
+            parents = True
+        elif a in ("-v", "--verbose"):
+            verbose = True
+        elif a.startswith("-m=") or a.startswith("--mode="):
+            mode = a.split("=", 1)[1]
+        else:
+            paths.append(a)
+
+    if not paths:
+        await message.channel.send("mkdir: missing operand")
+        return
+
+    for p in paths:
+        if not p.startswith("/"):
+            p = OS.join(OS.getCWD(), p)
+        p = OS.normalize(p)
+
+        if OS.exists(p) and not parents:
+            await message.channel.send(f"mkdir: cannot create directory '{p}': File exists")
+            continue
+
+        try:
+            OS.mkdir(p, parents=parents)
+        except Exception as e:
+            await message.channel.send(f"mkdir: cannot create directory '{p}': {e}")
+            continue
+
+        if mode:
+            try:
+                OS.chmod(p, int(mode, 8))
+            except:
+                await message.channel.send(f"mkdir: invalid mode '{mode}'")
+
+        if verbose:
+            await message.channel.send(f"mkdir: created directory '{p}'")

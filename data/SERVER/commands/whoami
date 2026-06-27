@@ -1,0 +1,12 @@
+# DESC: Runs whoami 
+COMMAND_NAME = "whoami"
+
+async def run(message, session, args):
+    if hasattr(session, "ssh_client") and session.ssh_client:
+        user = session.ssh_user or "unknown"
+        host = session.ssh_host or "unknown"
+        return f"{user}@{host} (ssh)"
+
+    uid = session.user_id or "none"
+    acc = session.account_id or "no-account"
+    return f"{uid}:{acc}"

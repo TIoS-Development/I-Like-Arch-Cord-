@@ -1,0 +1,80 @@
+# DESC: remove files or directories
+
+COMMAND_NAME = "rm"
+
+async def run(message, session, args):
+    OS = session.OS
+
+    if not args:
+        await message.channel.send("rm: missing operand")
+        return
+
+    recursive = False
+    force = False
+    paths = []
+
+    for a in args:
+        if a.startswith("-") and not a.startswith("--"):
+            for ch in a[1:]:
+                if ch == "r":
+                    recursive = True
+                elif ch == "f":
+                    force = True
+                else:
+                    await message.channel.send(f"rm: invalid option -- '{ch}'")
+                    return
+            continue
+        
+        if a in ("--recursive",):
+            recursive = True
+            continue
+        
+        if a in ("--force",):
+            force = True
+            continue
+        
+        paths.append(a)
+    
+
+    async def delete_recursive(path):
+        if OS.is_dir(path):
+            for name in OS.listdir(path):
+                child = OS.join(path, name)
+                await delete_recursive(child)
+            try:
+                OS.rmdir(path)
+            except Exception as e:
+                if not force:
+                    await message.channel.send(f"rm: cannot remove '{path}': {e}")
+            return
+
+        try:
+            OS.rm(path)
+        except Exception as e:
+            if not force:
+                await message.channel.send(f"rm: cannot remove '{path}': {e}")
+
+    for p in paths:
+        if not p.startswith("/"):
+            p = OS.join(OS.getCWD(), p)
+        p = OS.normalize(p)
+
+        if not OS.exists(p):
+            if not force:
+                await message.channel.send(f"rm: cannot remove '{p}': No such file or directory")
+            continue
+
+        if OS.is_dir(p):
+            if not recursive:
+                if not force:
+                    await message.channel.send(f"rm: cannot remove '{p}': Is a directory")
+                continue
+
+            await delete_recursive(p)
+            continue
+
+        try:
+            OS.rm(p)
+        except Exception as e:
+            if not force:
+                await message.channel.send(f"rm: cannot remove '{p}': {e}")

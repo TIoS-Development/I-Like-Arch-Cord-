@@ -1,0 +1,48 @@
+# DESC: Prints the given text to terminal, useful for writing files
+COMMAND_NAME = "echo"
+
+async def run(message, session, args):
+    if not args:
+        return "\n"
+
+    raw = args[0]
+
+    raw = raw.replace("U+TAB01", "    ")
+
+    no_newline = False
+    interpret = False
+    no_escape = False
+
+    if raw.startswith("-"):
+        flags, sep, rest = raw.partition(" ")
+        valid = True
+        for ch in flags[1:]:
+            if ch == "n":
+                no_newline = True
+            elif ch == "e":
+                interpret = True
+                no_escape = False
+            elif ch == "E":
+                no_escape = True
+                interpret = False
+            else:
+                valid = False
+                break
+        if valid:
+            raw = rest
+
+    if interpret:
+        raw = (
+            raw
+            .replace("\\n", "\n")
+            .replace("\\t", "\t")
+            .replace("\\r", "\r")
+            .replace("\\\\", "\\")
+            .replace("\\\"", "\"")
+            .replace("\\'", "'")
+        )
+
+    if not no_newline:
+        raw += "\n"
+
+    return raw

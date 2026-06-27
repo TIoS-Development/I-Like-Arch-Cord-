@@ -1,0 +1,14 @@
+# DESC: terminate a running process by PID
+
+COMMAND_NAME = "kill"
+
+async def run(message, session, args):
+    if not args:
+        return "Usage: kill <pid>"
+    try:
+        pid = int(args[0])
+    except:
+        return "Invalid PID"
+    if session.PROC.kill(pid):
+        return f"Killed {pid}"
+    return "No such process"

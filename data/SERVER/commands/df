@@ -1,0 +1,91 @@
+# DESC: Shows memory usage and stats.
+COMMAND_NAME = "df"
+
+import math
+
+async def run(message, session, args):
+    OS = session.OS
+
+    human = False
+    show_all = False
+    show_type = False
+    type_filter = None
+    type_exclude = None
+    block_size = 1024
+
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if a == "-h":
+            human = True
+        elif a == "-a":
+            show_all = True
+        elif a == "-T":
+            show_type = True
+        elif a == "-t" and i+1 < len(args):
+            type_filter = args[i+1]
+            i += 1
+        elif a == "-x" and i+1 < len(args):
+            type_exclude = args[i+1]
+            i += 1
+        elif a == "-B" and i+1 < len(args):
+            try:
+                block_size = int(args[i+1])
+            except:
+                block_size = 1024
+            i += 1
+        i += 1
+
+    quotas = OS.get_quotas()
+    total = quotas.get(session.user_id, 5 * 1024 * 1024 * 1024)
+
+    used = 0
+    stack = ["/"]
+    while stack:
+        p = stack.pop()
+        if OS.is_dir(p):
+            for name in OS.listdir(p):
+                stack.append(OS.join(p, name))
+        else:
+            size = OS.size(p)
+            if size:
+                used += size
+
+    free = max(total - used, 0)
+    pct = int((used / total) * 100)
+
+    warn = ""
+    if pct >= 95:
+        warn = "CRITICAL: 95%+ used"
+    elif pct >= 90:
+        warn = "WARNING: 90%+ used"
+    elif pct >= 80:
+        warn = "NOTICE: 80%+ used"
+
+    def fmt(n):
+        if not human:
+            return str(math.ceil(n / block_size))
+        for u in ["B","K","M","G","T"]:
+            if n < 1024:
+                return f"{n:.1f}{u}"
+            n /= 1024
+        return f"{n:.1f}P"
+
+    fs_type = "archcordfs"
+
+    if type_filter and fs_type != type_filter:
+        return ""
+    if type_exclude and fs_type == type_exclude:
+        return ""
+
+    if show_type:
+        header = "Filesystem     Type         Size     Used     Avail    Use%   Mounted"
+        line = f"/dev/archcord  {fs_type}   {fmt(total)}  {fmt(used)}  {fmt(free)}  {pct}%   /"
+    else:
+        header = "Filesystem     Size     Used     Avail    Use%   Mounted"
+        line = f"/dev/archcord  {fmt(total)}  {fmt(used)}  {fmt(free)}  {pct}%   /"
+
+    if warn:
+        return header + "\n" + line + "\n" + warn
+
+    return header + "\n" + line

@@ -1,0 +1,40 @@
+# DESC: create ZIP archives
+
+COMMAND_NAME = "zip"
+
+import base64
+import json
+
+async def run(message, session, args):
+    OS = session.OS
+
+    if len(args) < 2:
+        return "Usage: zip [-r] archive file"
+
+    recursive = False
+    i = 0
+    if args[0].startswith("-"):
+        if "r" in args[0]:
+            recursive = True
+        i += 1
+
+    archive = args[i]
+    targets = args[i+1:]
+
+    pkg = {}
+
+    def collect(path):
+        if OS.exists(path):
+            if OS.is_dir(path) and recursive:
+                for f in OS.listdir(path):
+                    collect(path.rstrip("/") + "/" + f)
+            data = OS.read(path)
+            pkg[path] = data
+
+    for t in targets:
+        collect(t)
+
+    raw = json.dumps(pkg).encode()
+    raw = base64.b64encode(raw)
+    OS.write(archive, raw.decode())
+    return ""

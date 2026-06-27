@@ -1,0 +1,10 @@
+# DESC: deletes your os, hmmm
+COMMAND_NAME = "emergencywipeyes"
+
+async def run(message, session, args):
+    OS = session.OS
+
+    result = OS.reset()
+
+    return result or "you fucked up"
+

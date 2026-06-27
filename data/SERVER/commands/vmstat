@@ -1,0 +1,96 @@
+# DESC: report virtual memory statistics
+
+COMMAND_NAME = "vmstat"
+
+import time, os, math
+
+async def run(message, session, args):
+    OS = session.OS
+    PROC = session.PROC
+
+    delay = 0
+    count = 1
+    summary = False
+    show_active = False
+    diskstats = False
+
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if a == "-s":
+            summary = True
+        elif a == "-a":
+            show_active = True
+        elif a == "-d":
+            diskstats = True
+        else:
+            try:
+                if delay == 0:
+                    delay = float(a)
+                else:
+                    count = int(a)
+            except:
+                pass
+        i += 1
+
+    quotas = OS.get_quotas()
+    total = quotas.get(session.user_id, 5 * 1024 * 1024 * 1024)
+
+    used = 0
+    for root, dirs, files in os.walk(OS.fs_root):
+        for f in files:
+            try:
+                used += os.path.getsize(os.path.join(root, f))
+            except:
+                pass
+
+    free = max(total - used, 0)
+
+    if summary:
+        out = []
+        out.append(f"{total} total memory")
+        out.append(f"{used} used memory")
+        out.append(f"{free} free memory")
+        out.append(f"{total//2} total swap")
+        out.append(f"{used//4} used swap")
+        out.append(f"{(total//2)-(used//4)} free swap")
+        return "\n".join(out)
+
+    if diskstats:
+        out = []
+        out.append("disk        reads   writes")
+        out.append(f"archcord    {used//4096}   {used//2048}")
+        return "\n".join(out)
+
+    def snapshot():
+        procs = len(PROC.list())
+        r = procs
+        b = 0
+        swpd = total // 2
+        free_m = free
+        buff = used // 20
+        cache = used // 10
+        si = 0
+        so = 0
+        bi = used // 4096
+        bo = used // 2048
+        in_ = 100 + procs
+        cs = 200 + procs * 2
+        cpu_share = 100 / max(1, len({p["user"] for p in PROC.procs.values()}))
+        us = int(cpu_share * 0.6)
+        sy = int(cpu_share * 0.3)
+        idl = 100 - (us + sy)
+        wa = 0
+        st = 0
+        return f"{r:2d} {b:2d} {swpd:6d} {free_m:6d} {buff:6d} {cache:6d} {si:3d} {so:3d} {bi:4d} {bo:4d} {in_:4d} {cs:4d} {us:2d} {sy:2d} {idl:2d} {wa:2d} {st:2d}"
+
+    header = " r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st"
+
+    out = [header]
+
+    for _ in range(count):
+        out.append(snapshot())
+        if count > 1:
+            time.sleep(delay)
+
+    return "\n".join(out)

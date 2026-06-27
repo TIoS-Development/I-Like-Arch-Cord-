@@ -1,0 +1,76 @@
+# DESC: display system activity and resource usage
+
+COMMAND_NAME = "top"
+
+import time
+
+async def run(message, session, args):
+    OS = session.OS
+    PROC = session.PROC
+
+    sort_cpu = False
+    sort_mem = False
+    show_all = False
+    iterations = 1
+    delay = 1
+
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if a == "-a":
+            show_all = True
+        elif a == "-o" and i+1 < len(args):
+            if args[i+1] == "cpu":
+                sort_cpu = True
+            if args[i+1] == "mem":
+                sort_mem = True
+            i += 1
+        elif a == "-n" and i+1 < len(args):
+            try:
+                iterations = int(args[i+1])
+            except:
+                iterations = 1
+            i += 1
+        elif a == "-d" and i+1 < len(args):
+            try:
+                delay = float(args[i+1])
+            except:
+                delay = 1
+            i += 1
+        i += 1
+
+    out = []
+
+    for _ in range(iterations):
+        procs = PROC.list()
+
+        rows = []
+        for p in procs:
+            if not show_all and p["cpu"] <= 0 and p["mem"] <= 0:
+                continue
+            rows.append({
+                "pid": p["pid"],
+                "name": p["name"],
+                "cpu": p["cpu"],
+                "mem": p["mem"],
+                "state": p["state"]
+            })
+
+        if sort_cpu:
+            rows.sort(key=lambda x: x["cpu"], reverse=True)
+        elif sort_mem:
+            rows.sort(key=lambda x: x["mem"], reverse=True)
+        else:
+            rows.sort(key=lambda x: x["pid"])
+
+        header = "PID    CPU%   MEM%   STATE    NAME"
+        out.append(header)
+
+        for r in rows:
+            out.append(f"{r['pid']:<6} {r['cpu']:<6} {r['mem']:<6} {r['state']:<8} {r['name']}")
+
+        if iterations > 1:
+            out.append("")
+            time.sleep(delay)
+
+    return "\n".join(out)

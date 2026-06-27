@@ -1,0 +1,10 @@
+# DESC: remove a file without affecting its directory entry
+
+COMMAND_NAME = "unlink"
+
+async def run(message, session, args):
+    OS = session.OS
+    if len(args) < 1:
+        return "Usage: unlink file"
+    OS.delete(args[0])
+    return ""

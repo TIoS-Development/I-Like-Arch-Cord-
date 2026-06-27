@@ -1,0 +1,4 @@
+Welcome to ArchCord, a custom VM built by TGIMB, you start with nothing. want secure ssh? you have to make it.
+in this vm, you will NOT be babied, delete all your files via rm -rf /. that sucks, but i cant revert it. 
+want encryption? make it! there is so much flexablilty that you can even register domains, for a SSH harden script to protect your self
+please run wget vault://ssh-harden. it will download the installer for the ssh harden. run it and you will have some protection.

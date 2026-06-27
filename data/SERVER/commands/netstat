@@ -1,0 +1,23 @@
+COMMAND_NAME = "netstat"
+
+async def run(message, session, args):
+    NET = session.NET
+
+    lines = [
+        f"IP: {NET.get_ip()}",
+        "",
+        f"{'Proto':<6} {'Port':<7} {'State':<8} Service"
+    ]
+
+    for svc in NET.list_ports():
+        lines.append(f"{svc.proto:<6} {svc.port:<7} "
+                     f"{'OPEN' if svc.open else 'CLOSED':<8} {svc.name}")
+
+    if not NET.list_ports():
+        lines.append("  (no services)")
+
+    lines.append("")
+    lines.append(f"Active connections : {len(NET.connections)}")
+    lines.append(f"Packets logged     : {len(NET.packet_log)}")
+
+    return "\n".join(lines)

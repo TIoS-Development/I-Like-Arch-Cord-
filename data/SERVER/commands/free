@@ -1,0 +1,68 @@
+# DESC: shows total, used, and free system memory
+COMMAND_NAME = "free"
+
+import math
+
+async def run(message, session, args):
+    OS = session.OS
+
+    human = False
+    unit = 1024
+    show_total = False
+
+    for a in args:
+        if a == "-h":
+            human = True
+        elif a == "-b":
+            unit = 1
+        elif a == "-k":
+            unit = 1024
+        elif a == "-m":
+            unit = 1024 * 1024
+        elif a == "-g":
+            unit = 1024 * 1024 * 1024
+        elif a == "-t":
+            show_total = True
+
+    quotas = OS.get_quotas()
+    total = quotas.get(session.user_id, 5 * 1024 * 1024 * 1024)
+
+    used = 0
+    stack = ["/"]
+    while stack:
+        p = stack.pop()
+        if OS.is_dir(p):
+            for name in OS.listdir(p):
+                stack.append(OS.join(p, name))
+        else:
+            s = OS.size(p)
+            if s:
+                used += s
+
+    free = max(total - used, 0)
+
+    swap_total = total // 2
+    swap_used = used // 4
+    swap_free = max(swap_total - swap_used, 0)
+
+    def fmt(n):
+        if not human:
+            return str(n // unit)
+        for u in ["B","K","M","G","T"]:
+            if n < 1024:
+                return f"{n:.1f}{u}"
+            n /= 1024
+        return f"{n:.1f}P"
+
+    out = []
+    out.append("              total        used        free")
+    out.append(f"Mem:      {fmt(total):>10} {fmt(used):>10} {fmt(free):>10}")
+    out.append(f"Swap:     {fmt(swap_total):>10} {fmt(swap_used):>10} {fmt(swap_free):>10}")
+
+    if show_total:
+        t_total = total + swap_total
+        t_used = used + swap_used
+        t_free = free + swap_free
+        out.append(f"Total:    {fmt(t_total):>10} {fmt(t_used):>10} {fmt(t_free):>10}")
+
+    return "\n".join(out)

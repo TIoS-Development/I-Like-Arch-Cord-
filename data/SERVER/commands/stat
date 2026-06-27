@@ -1,0 +1,10 @@
+# DESC: display file type and size information
+
+COMMAND_NAME = "stat"
+
+async def run(message, session, args):
+    OS = session.OS
+    if len(args) < 1:
+        return "Usage: stat file"
+    info = OS.stat(args[0])
+    return f"type: {info['type']}\nsize: {info['size']}"

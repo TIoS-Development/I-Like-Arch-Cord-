@@ -1,0 +1,51 @@
+# DESC: Puts a file into storage that was uploaded (made by XWASHERE)
+COMMAND_NAME = "put"
+
+import io
+import discord
+
+async def run(message, session, args):
+    OS = session.OS
+
+    if len(message.attachments) < 1:
+        return "put: no file provided"
+    if len(message.attachments) > 1:
+        return "put: only one file at a time"
+
+    if len(args) < 1:
+        return "put: missing destination path"
+
+    dest = args[0]
+
+    if not dest.startswith("/"):
+        dest = OS.join(OS.getCWD(), dest)
+    dest = OS.normalize(dest)
+
+    try:
+        raw = await message.attachments[0].read()
+    except Exception as e:
+        return f"put: error reading attachment: {e}"
+
+    if not raw:
+        return "put: uploaded file is empty"
+
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return "put: file is not valid UTF-8 text"
+
+    if OS.exists(dest) and OS.is_dir(dest):
+        filename = message.attachments[0].filename
+        dest = OS.join(dest, filename)
+        dest = OS.normalize(dest)
+
+    parent = "/".join(dest.split("/")[:-1])
+    if parent and not OS.exists(parent):
+        return f"put: cannot write to {dest}: directory does not exist"
+
+    try:
+        OS.write(dest, text)
+    except Exception as e:
+        return f"put: write failed: {e}"
+
+    return f"put: wrote {len(text)} bytes to {dest}"

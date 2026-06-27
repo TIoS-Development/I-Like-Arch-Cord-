@@ -1,0 +1,15 @@
+COMMAND_NAME = "logout"
+
+async def run(message, session, args):
+    if session.ssh_client:
+        session.config = session.OS.ssh_logout(
+            session.original_user_id,
+            session.original_account_id
+        )
+
+        session.ssh_client = None
+        session.ssh_user = None
+        session.ssh_host = None
+
+        return "SSH session closed."
+    return ""

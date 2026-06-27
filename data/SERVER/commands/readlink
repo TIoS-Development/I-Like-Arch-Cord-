@@ -1,0 +1,13 @@
+# DESC: show the target of a symlink or hardlink
+
+COMMAND_NAME = "readlink"
+
+async def run(message, session, args):
+    OS = session.OS
+    if len(args) < 1:
+        return "Usage: readlink file"
+    links = OS.load_links()
+    p = args[0]
+    if p in links and links[p]["type"] == "symlink":
+        return links[p]["target"]
+    return ""

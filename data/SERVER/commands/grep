@@ -1,0 +1,80 @@
+# DESC: search for text patterns inside files
+
+COMMAND_NAME = "grep"
+
+import fnmatch
+import re
+
+async def run(message, session, args):
+    OS = session.OS
+
+    if len(args) < 2:
+        return "Usage: grep [options] pattern file"
+
+    flags = {
+        "i": False,
+        "v": False,
+        "r": False,
+        "n": False,
+        "c": False,
+        "l": False,
+        "w": False,
+        "x": False
+    }
+
+    i = 0
+    while i < len(args) and args[i].startswith("-"):
+        for ch in args[i][1:]:
+            if ch in flags:
+                flags[ch] = True
+        i += 1
+
+    pattern = args[i]
+    file = args[i+1]
+
+    if flags["i"]:
+        regex = re.compile(pattern, re.IGNORECASE)
+    else:
+        regex = re.compile(pattern)
+
+    results = []
+    files = []
+
+    def collect(path):
+        if OS.is_dir(path) and flags["r"]:
+            for f in OS.listdir(path):
+                collect(path.rstrip("/") + "/" + f)
+        elif OS.exists(path):
+            files.append(path)
+
+    collect(file)
+
+    for f in files:
+        data = OS.read(f)
+        if data is None:
+            continue
+        lines = data.split("\n")
+        count = 0
+        for idx, line in enumerate(lines, 1):
+            text = line
+            match = regex.search(text)
+            if flags["w"]:
+                match = re.search(rf"\b{pattern}\b", text, re.I if flags["i"] else 0)
+            if flags["x"]:
+                match = (text == pattern) or (flags["i"] and text.lower() == pattern.lower())
+            if flags["v"]:
+                match = not match
+            if match:
+                count += 1
+                if flags["l"]:
+                    results.append(f)
+                    break
+                if not flags["c"]:
+                    if flags["n"]:
+                        results.append(f"{f}:{idx}:{text}")
+                    else:
+                        results.append(text)
+        if flags["c"]:
+            results.append(f"{f}:{count}")
+
+    return "\n".join(results)

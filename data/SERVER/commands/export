@@ -1,0 +1,51 @@
+# DESC: Exports a VM file to a real Discord file
+COMMAND_NAME = "export"
+
+import io
+import discord
+
+async def run(message, session, args):
+    OS = session.OS
+
+    if len(args) < 1:
+        return "export: missing file operand"
+
+    path = args[0]
+
+
+    if not path.startswith("/"):
+        path = OS.join(OS.getCWD(), path)
+    path = OS.normalize(path)
+
+
+    if not OS.exists(path):
+        return f"export: {path}: no such file"
+
+    if OS.is_dir(path):
+        return f"export: {path}: is a directory"
+
+
+    try:
+        data = OS.read(path)
+    except Exception as e:
+        return f"export: failed to read file: {e}"
+
+    if data is None:
+        return f"export: {path}: empty or unreadable"
+
+
+    if isinstance(data, str):
+        data = data.encode("utf-8")
+
+    file_bytes = io.BytesIO(data)
+
+    filename = path.split("/")[-1]
+    if filename.strip() == "":
+        filename = "exported_file"
+
+    await message.channel.send(
+        content=f"Exported `{path}`:",
+        file=discord.File(file_bytes, filename)
+    )
+
+    return ""

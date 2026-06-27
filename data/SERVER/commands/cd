@@ -1,0 +1,32 @@
+#if you are reading this, i am so sorry :sob:
+# DESC: Changes the working directory
+COMMAND_NAME = "cd"
+
+async def run(message, session, args):
+    OS = session.OS
+
+    if not args:
+        OS.setCWD(f"/home/{session.user_id}")
+        await message.channel.send(OS.getCWD())
+        return
+
+    target = args[0]
+
+    if not target.startswith("/"):
+        target = OS.join(OS.getCWD(), target)
+    target = OS.normalize(target)
+
+
+    if not OS.exists(target):
+        await message.channel.send(f"No such file or directory: {target}")
+        return
+
+
+    if not OS.is_dir(target):
+        await message.channel.send(f"Not a directory: {target}")
+        return
+
+
+    OS.setCWD(target)
+    return OS.getCWD() + "\n"
+

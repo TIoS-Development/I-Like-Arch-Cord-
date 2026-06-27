@@ -1,0 +1,114 @@
+# DESC: list directory contents
+
+COMMAND_NAME = "ls"
+
+async def run(message, session, args):
+    OS = session.OS
+
+    show_all = False
+    long_fmt = False
+    one_per_line = False
+    recursive = False
+
+    paths = []
+
+    for a in args:
+        if a.startswith("-") and not a.startswith("--"):
+            for ch in a[1:]:
+                if ch == "a":
+                    show_all = True
+                elif ch == "l":
+                    long_fmt = True
+                elif ch == "1":
+                    one_per_line = True
+                elif ch == "R":
+                    recursive = True
+                else:
+                    await message.channel.send(f"ls: invalid option -- '{ch}'")
+                    return
+        else:
+            paths.append(a)
+
+    if not paths:
+        paths = [OS.getCWD()]
+
+    norm_paths = []
+    for p in paths:
+        if not p.startswith("/"):
+            p = OS.join(OS.getCWD(), p)
+        norm_paths.append(OS.normalize(p))
+
+    async def list_dir(path, header=True):
+        if not OS.exists(path):
+            await message.channel.send(f"ls: cannot access '{path}': No such file or directory")
+            return
+
+        if not OS.is_dir(path):
+            await message.channel.send(format_entry(path))
+            return
+
+        names = OS.listdir(path)
+        names.sort()
+
+        output = []
+
+        if header:
+            output.append(f"{path}:")
+
+        for name in names:
+            if not show_all and name.startswith("."):
+                continue
+            full = OS.join(path, name)
+            output.append(format_entry(full))
+
+        sep = "\n" if one_per_line or long_fmt else "  "
+        text = sep.join(output)
+        if text.strip() == "":
+            text = "​"
+
+        await message.channel.send(text)
+
+        if recursive:
+            for name in names:
+                if name in (".", ".."):
+                    continue
+                full = OS.join(path, name)
+                if OS.is_dir(full):
+                    await list_dir(full, header=True)
+
+    def format_entry(path):
+        name = OS.basename(path)
+        st = OS.stat(path)
+        t = st["type"]
+        size = st["size"]
+
+        if t == "dir":
+            prefix = "/"
+        elif t == "symlink":
+            prefix = "l"
+        elif t == "hardlink":
+            prefix = "h"
+        else:
+            prefix = "-"
+
+        if not long_fmt:
+            if t == "symlink":
+                links = OS.load_links()
+                return f"{prefix} {name} -> {links[path]['target']}"
+            return f"{prefix} {name}"
+
+        perms = {
+            "dir": "drwxr-xr-x",
+            "file": "-rw-r--r--",
+            "symlink": "lrwxrwxrwx",
+            "hardlink": "-rw-r--r--"
+        }.get(t, "-rw-r--r--")
+
+        if t == "symlink":
+            links = OS.load_links()
+            return f"{perms} {size:>6} {name} -> {links[path]['target']}"
+
+        return f"{perms} {size:>6} {name}"
+
+    for i, p in enumerate(norm_paths):
+        await list_dir(p, header=(len(norm_paths) > 1))

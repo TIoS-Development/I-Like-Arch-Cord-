@@ -1,0 +1,52 @@
+# DESC: show system information such as OS and architecture
+
+COMMAND_NAME = "uname"
+
+async def run(message, session, args):
+    flags = {
+        "-a": False,
+        "-s": False,
+        "-n": False,
+        "-r": False,
+        "-v": False,
+        "-m": False,
+        "-p": False,
+        "-o": False
+    }
+
+    for a in args:
+        if a in flags:
+            flags[a] = True
+
+    kname = "ArchCord"
+    node = f"ac-{session.user_id}"
+    release = "1.0.0"
+    version = "ArchCord Kernel 1.0"
+    machine = "x86_64"
+    processor = "AMD64"
+    osname = "ArchCordOS"
+
+    if flags["-a"]:
+        return f"{kname} {node} {release} {version} {machine} {processor} {osname}"
+
+    out = []
+
+    if flags["-s"]:
+        out.append(kname)
+    if flags["-n"]:
+        out.append(node)
+    if flags["-r"]:
+        out.append(release)
+    if flags["-v"]:
+        out.append(version)
+    if flags["-m"]:
+        out.append(machine)
+    if flags["-p"]:
+        out.append(processor)
+    if flags["-o"]:
+        out.append(osname)
+
+    if not out:
+        return kname
+
+    return " ".join(out)

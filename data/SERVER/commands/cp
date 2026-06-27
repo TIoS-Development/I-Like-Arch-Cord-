@@ -1,0 +1,95 @@
+# DESC: Copies a given file to a given directory
+COMMAND_NAME = "cp"
+
+async def run(message, session, args):
+    OS = session.OS
+
+    if not args:
+        await message.channel.send("cp: missing file operand")
+        return
+
+    recursive = False
+    force = False
+    paths = []
+
+    for a in args:
+        if a.startswith("-") and not a.startswith("--"):
+            for ch in a[1:]:
+                if ch == "r":
+                    recursive = True
+                elif ch == "f":
+                    force = True
+                else:
+                    await message.channel.send(f"cp: invalid option -- '{ch}'")
+                    return
+            continue
+
+        if a == "--recursive":
+            recursive = True
+            continue
+
+        if a == "--force":
+            force = True
+            continue
+
+        paths.append(a)
+
+    if len(paths) < 2:
+        await message.channel.send("cp: missing destination file operand")
+        return
+
+    *sources, dest = paths
+
+    if not dest.startswith("/"):
+        dest = OS.join(OS.getCWD(), dest)
+    dest = OS.normalize(dest)
+    async def copy_recursive(src, dst):
+        if OS.is_dir(src):
+            if not OS.exists(dst):
+                OS.mkdir(dst)
+
+            for name in OS.listdir(src):
+                child_src = OS.join(src, name)
+                child_dst = OS.join(dst, name)
+                await copy_recursive(child_src, child_dst)
+            return
+
+        try:
+            OS.cp_file(src, dst)
+        except Exception as e:
+            if not force:
+                await message.channel.send(f"cp: cannot copy '{src}' to '{dst}': {e}")
+
+    if len(sources) > 1 and not OS.is_dir(dest):
+        await message.channel.send(f"cp: target '{dest}' is not a directory")
+        return
+    for src in sources:
+        if not src.startswith("/"):
+            src = OS.join(OS.getCWD(), src)
+        src = OS.normalize(src)
+
+        if not OS.exists(src):
+            if not force:
+                await message.channel.send(f"cp: cannot stat '{src}': No such file or directory")
+            continue
+
+        if OS.is_dir(dest):
+            final_dst = OS.join(dest, OS.basename(src))
+        else:
+            final_dst = dest
+
+        # Directory? lmmm idk what these comments are.
+        if OS.is_dir(src):
+            if not recursive:
+                if not force:
+                    await message.channel.send(f"cp: -r not specified; omitting directory '{src}'")
+                continue
+
+            await copy_recursive(src, final_dst)
+            continue
+
+        try:
+            OS.cp_file(src, final_dst)
+        except Exception as e:
+            if not force:
+                await message.channel.send(f"cp: cannot copy '{src}' to '{final_dst}': {e}")

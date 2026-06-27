@@ -1,0 +1,146 @@
+# DESC: Finds a file given the arguments
+COMMAND_NAME = "find"
+
+import fnmatch
+import time
+
+async def run(message, session, args):
+    OS = session.OS
+
+    if len(args) == 0:
+        return "Usage: find <path> [options]"
+
+    start_path = args[0]
+    name_pattern = None
+    type_filter = None
+    maxdepth = None
+    mindepth = 0
+    size_filter = None
+    mtime_filter = None
+    exec_cmd = None
+
+    i = 1
+    while i < len(args):
+        token = args[i]
+
+        if token == "-name" and i + 1 < len(args):
+            name_pattern = args[i+1]
+            i += 2
+            continue
+
+        if token == "-type" and i + 1 < len(args):
+            type_filter = args[i+1]
+            i += 2
+            continue
+
+        if token == "-maxdepth" and i + 1 < len(args):
+            maxdepth = int(args[i+1])
+            i += 2
+            continue
+
+        if token == "-mindepth" and i + 1 < len(args):
+            mindepth = int(args[i+1])
+            i += 2
+            continue
+
+        if token == "-size" and i + 1 < len(args):
+            size_filter = args[i+1]
+            i += 2
+            continue
+
+        if token == "-mtime" and i + 1 < len(args):
+            mtime_filter = args[i+1]
+            i += 2
+            continue
+
+        if token == "-exec":
+            exec_cmd = []
+            i += 1
+            while i < len(args) and args[i] != ";":
+                exec_cmd.append(args[i])
+                i += 1
+            i += 1
+            continue
+
+        i += 1
+
+
+    if not OS.exists(start_path):
+        return f"find: '{start_path}': No such file or directory"
+
+    results = []
+
+    def walk(path, depth):
+        if depth >= mindepth:
+            results.append(path)
+
+        if maxdepth is not None and depth >= maxdepth:
+            return
+
+        if not OS.is_dir(path):
+            return
+
+        for name in OS.listdir(path):
+            child = path.rstrip("/") + "/" + name
+            walk(child, depth + 1)
+
+    walk(start_path, 0)
+
+    filtered = []
+
+    for r in results:
+        name = r.split("/")[-1]
+
+        if name_pattern and not fnmatch.fnmatch(name, name_pattern):
+            continue
+
+        if type_filter == "f" and OS.is_dir(r):
+            continue
+        if type_filter == "d" and not OS.is_dir(r):
+            continue
+
+        if size_filter:
+            data = OS.read(r)
+            if data is None:
+                continue
+            size = len(data)
+
+
+            if size_filter.startswith("+"):
+                if size <= int(size_filter[1:]):
+                    continue
+            elif size_filter.startswith("-"):
+                if size >= int(size_filter[1:]):
+                    continue
+            else:
+                if size != int(size_filter):
+                    continue
+
+        if mtime_filter:
+
+            meta = OS.read(f"/etc/mtime{r}")
+            mtime = int(meta) if meta else 0
+            days = (time.time() - mtime) / 86400
+
+            if mtime_filter.startswith("+"):
+                if days <= int(mtime_filter[1:]):
+                    continue
+            elif mtime_filter.startswith("-"):
+                if days >= int(mtime_filter[1:]):
+                    continue
+            else:
+                if int(days) != int(mtime_filter):
+                    continue
+
+        filtered.append(r)
+
+
+    if exec_cmd:
+        out = []
+        for f in filtered:
+            cmd = [c.replace("{}", f) for c in exec_cmd]
+            result = await session.run_command(cmd[0], cmd[1:])
+            out.append(result)
+        return "\n".join(out)
+
+    return "\n".join(filtered)

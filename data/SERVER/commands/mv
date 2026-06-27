@@ -1,0 +1,66 @@
+# DESC: move or rename files and directories
+
+COMMAND_NAME = "mv"
+
+async def run(message, session, args):
+    OS = session.OS
+
+    if not args:
+        await message.channel.send("mv: missing file operand")
+        return
+
+    force = False
+    paths = []
+
+    for a in args:
+        if a.startswith("-") and not a.startswith("--"):
+            for ch in a[1:]:
+                if ch == "f":
+                    force = True
+                else:
+                    await message.channel.send(f"mv: invalid option -- '{ch}'")
+                    return
+            continue
+
+        if a == "--force":
+            force = True
+            continue
+
+        paths.append(a)
+
+    if len(paths) < 2:
+        await message.channel.send("mv: missing destination file operand")
+        return
+
+    *sources, dest = paths
+
+    if not dest.startswith("/"):
+        dest = OS.join(OS.getCWD(), dest)
+    dest = OS.normalize(dest)
+
+    if len(sources) > 1 and not OS.is_dir(dest):
+        await message.channel.send(f"mv: target '{dest}' is not a directory")
+        return
+
+    for src in sources:
+        if not src.startswith("/"):
+            src = OS.join(OS.getCWD(), src)
+        src = OS.normalize(src)
+
+        if not OS.exists(src):
+            await message.channel.send(f"mv: cannot stat '{src}': No such file or directory")
+            continue
+
+        if OS.is_dir(dest):
+            final_dst = OS.join(dest, OS.basename(src))
+        else:
+            final_dst = dest
+
+        if OS.exists(final_dst) and not force:
+            await message.channel.send(f"mv: cannot move '{src}': '{final_dst}' already exists")
+            continue
+
+        try:
+            OS.mv(src, final_dst)
+        except Exception as e:
+            await message.channel.send(f"mv: cannot move '{src}' to '{final_dst}': {e}")

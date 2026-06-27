@@ -1,0 +1,36 @@
+# DESC: display the system's hostname
+
+COMMAND_NAME = "hostname"
+
+import os, json
+
+async def run(message, session, args):
+    OS = session.OS
+    path = f"data/SERVER/user/{session.user_id}_hostname.json"
+
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as f:
+            host = json.load(f).get("hostname", f"ac-{session.user_id}")
+    else:
+        host = f"ac-{session.user_id}"
+
+    if len(args) == 0:
+        return host
+
+    if args[0] == "-f":
+        return host + ".archcord.local"
+
+    if args[0] == "-s":
+        return host.split(".")[0]
+
+    if args[0] == "-d":
+        if "." in host:
+            return host.split(".", 1)[1]
+        return ""
+
+    new = args[0]
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump({"hostname": new}, f)
+
+    return new

@@ -1,0 +1,54 @@
+# DESC: archive or extract files using tar format
+
+COMMAND_NAME = "tar"
+
+import base64
+import json
+
+async def run(message, session, args):
+    OS = session.OS
+
+    if len(args) < 3:
+        return "Usage: tar -[c/x][v][z]f archive file"
+
+    flags = args[0]
+    create = "c" in flags
+    extract = "x" in flags
+    verbose = "v" in flags
+    gzip = "z" in flags
+    archive = args[1]
+    targets = args[2:]
+
+    if create:
+        pkg = {}
+        def collect(path):
+            if OS.exists(path):
+                if OS.is_dir(path):
+                    for f in OS.listdir(path):
+                        collect(path.rstrip("/") + "/" + f)
+                data = OS.read(path)
+                pkg[path] = data
+        for t in targets:
+            collect(t)
+        raw = json.dumps(pkg).encode()
+        if gzip:
+            raw = base64.b64encode(raw)
+        OS.write(archive, raw.decode())
+        return "\n".join(pkg.keys()) if verbose else ""
+
+    if extract:
+        raw = OS.read(archive)
+        if raw is None:
+            return f"tar: {archive}: not found"
+        data = raw.encode()
+        if gzip:
+            data = base64.b64decode(data)
+        pkg = json.loads(data.decode())
+        out = []
+        for path, content in pkg.items():
+            OS.write(path, content)
+            if verbose:
+                out.append(path)
+        return "\n".join(out)
+
+    return "tar: invalid flags"

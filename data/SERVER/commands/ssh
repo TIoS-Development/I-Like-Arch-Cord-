@@ -1,0 +1,30 @@
+COMMAND_NAME = "ssh"
+
+async def run(message, session, args):
+    if len(args) < 1:
+        return "Usage: ssh user@account [password]"
+
+    target = args[0]
+
+    if target.count("@") != 1:
+        return "ssh: invalid target format (expected user@account)"
+
+    user, account = target.split("@", 1)
+    password = args[1] if len(args) > 1 else None
+
+    try:
+        uid = int(user)
+    except:
+        return "ssh: invalid user (must be numeric Discord ID)"
+
+    ok, result = session.OS.ssh_login(uid, account, password)
+
+    if not ok:
+        return result
+
+    session.ssh_client = True
+    session.ssh_user = uid
+    session.ssh_host = account
+    session.config = result
+
+    return f"Connected to {user}@{account}"

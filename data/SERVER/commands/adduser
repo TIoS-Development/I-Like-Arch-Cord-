@@ -1,0 +1,39 @@
+# DESC: Adds a user when given the username
+COMMAND_NAME = "adduser"
+
+import json
+
+async def run(message, session, args):
+    OS = session.OS
+
+    if len(args) == 0:
+        return "Usage: adduser username"
+
+    username = args[0]
+
+    passwd_path = "/etc/passwd"
+    shadow_path = "/etc/shadow"
+    passwd = OS.read(passwd_path) or ""
+    for line in passwd.split("\n"):
+        if line.startswith(username + ":"):
+            return "adduser: user exists"
+
+    uid = abs(hash(username)) % 100000
+    gid = uid
+
+    shell = "/bin/sh"
+    home = f"/home/{username}"
+
+    new_passwd_entry = f"{username}:x:{uid}:{gid}:{username}:{home}:{shell}\n"
+    OS.write(passwd_path, (passwd + new_passwd_entry).rstrip("\n") + "\n")
+
+    shadow = OS.read(shadow_path) or ""
+    new_shadow_entry = f"{username}:\n"
+    OS.write(shadow_path, (shadow + new_shadow_entry).rstrip("\n") + "\n")
+
+    OS.mkdir(home)
+    OS.mkdir(home + "/scripts")
+
+    OS.write(home + "/settings.json", json.dumps({"shell": shell}))
+
+    return f"Added user {username}"

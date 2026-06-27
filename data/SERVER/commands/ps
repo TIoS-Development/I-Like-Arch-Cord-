@@ -1,0 +1,10 @@
+# DESC: display running processes
+
+COMMAND_NAME = "ps"
+
+async def run(message, session, args):
+    rows = session.PROC.list()
+    out = ["PID   CPU%   MEM%   STATE   NAME"]
+    for r in rows:
+        out.append(f"{r['pid']:<5} {r['cpu']:<6} {r['mem']:<6} {r['state']:<7} {r['name']}")
+    return "\n".join(out)
