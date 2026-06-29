@@ -1,0 +1,30 @@
+# i do NOT want to learn how TGIMB made the main bot, thus im making a crappy command import system, this uses cogs & extensions
+# create a similar file with the name starting with "ADD_" and use cogs & extensions to add aditional commands without wanting to die (/j)
+# Keep TGIMBs security rules in mind, please dont import random things
+
+import os
+import json
+import uuid
+import traceback
+import time
+import discord
+from discord.ext import commands
+from discord import app_commands
+import importlib
+import importlib.util
+from discord.ui import View, Button
+
+class BaseCommands(commands.Cog):
+
+    def __init__(self, bot: commands.Bot): # Start of Cog
+        self.bot = bot
+        self._last_member = None
+    
+
+    @app_commands.command()
+    async def ping(self, inter: discord.Interaction):
+        await inter.response.send_message(f"Responded in {round(self.bot.latency * 1000)}ms")
+
+
+async def setup(bot: commands.Bot):
+    await bot.add_cog(BaseCommands(bot))

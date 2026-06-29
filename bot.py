@@ -2,6 +2,7 @@ import os
 import json
 import uuid
 import traceback
+import time
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -32,9 +33,8 @@ BASE = os.path.dirname(__file__)
 DATA = os.path.join(BASE, "data")
 USERS = os.path.join(DATA, "users")
 SERVER = os.path.join(DATA, "SERVER")
+ADDCOMMANDS = os.path.join(DATA, "ADDCOMMANDS")
 COMMANDS = os.path.join(SERVER, "commands")
-
-
 
 
 # util
@@ -842,9 +842,35 @@ async def reinstall(interaction: discord.Interaction):
     print("please add something here")
 
 
+# ADDITIONAL COMMANDS
 
+
+@bot.tree.command(name="Reload Additional Commands", description="Reload additional commands from ADDCOMMANDS And load new ones.")
+async def reload_additional_commands(interaction: discord.Interaction):
+    if interaction.user.id != DEV_ID:
+        await interaction.response.send_message("You are not authorized to use this command.",ephemeral=True)
+        return
+
+    elif interaction.user.id == DEV_ID:
+        filenames = next(os.walk(ADDCOMMANDS), (None, None, []))[2]
+        for file in filenames:
+            try:
+                if file.startswith("ADD_"):
+                    await bot.unload_extension(f"data.ADDCOMMANDS.{file[:-3]}")
+                    await bot.load_extension(f"data.ADDCOMMANDS.{file[:-3]}")
+            except Exception as e:
+                await interaction.response.send_message(f"Error reloading {file}: {e}",ephemeral=True)
+                return
+                    
+                
+            
+
+
+
+        await interaction.response.send_message("Reloaded successfully.",ephemeral=True)
 
 # RUN THE DAMN THING
+
 
 if __name__ == "__main__":
     ensure_dirs()
