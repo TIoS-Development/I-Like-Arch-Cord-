@@ -862,12 +862,7 @@ async def reload_additional_commands(interaction: discord.Interaction):
                 await interaction.response.send_message(f"Error reloading {file}: {e}",ephemeral=True)
                 return
                     
-                
-            
-
-
-
-        await interaction.response.send_message("Reloaded successfully.",ephemeral=True)
+            await interaction.response.send_message("Reloaded successfully.",ephemeral=True)
 
 # RUN THE DAMN THING
 

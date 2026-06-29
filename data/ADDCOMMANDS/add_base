@@ -1,5 +1,5 @@
 # i do NOT want to learn how TGIMB made the main bot, thus im making a crappy command import system, this uses cogs & extensions
-# create a similar file with the name starting with "ADD_" and use cogs & extensions to add aditional commands without wanting to die (/j)
+# create a similar file with the name starting with "add_" and use cogs & extensions to add aditional commands without wanting to die (/j)
 # Keep TGIMBs security rules in mind, please dont import random things
 
 import os
