@@ -845,7 +845,7 @@ async def reinstall(interaction: discord.Interaction):
 # ADDITIONAL COMMANDS
 
 
-@bot.tree.command(name="Reload Additional Commands", description="Reload additional commands from ADDCOMMANDS And load new ones.")
+@bot.tree.command(name="reload-commands", description="Reload additional commands from ADDCOMMANDS And load new ones.")
 async def reload_additional_commands(interaction: discord.Interaction):
     if interaction.user.id != DEV_ID:
         await interaction.response.send_message("You are not authorized to use this command.",ephemeral=True)
