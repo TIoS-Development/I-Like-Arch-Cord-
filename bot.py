@@ -33,7 +33,7 @@ BASE = os.path.dirname(__file__)
 DATA = os.path.join(BASE, "data")
 USERS = os.path.join(DATA, "users")
 SERVER = os.path.join(DATA, "SERVER")
-ADDCOMMANDS = os.path.join(DATA, "ADDCOMMANDS")
+ADD = os.path.join("ADDCOMMANDS")
 COMMANDS = os.path.join(SERVER, "commands")
 
 
@@ -852,12 +852,12 @@ async def reload_additional_commands(interaction: discord.Interaction):
         return
 
     elif interaction.user.id == DEV_ID:
-        filenames = next(os.walk(ADDCOMMANDS), (None, None, []))[2]
+        filenames = next(os.walk(ADD), (None, None, []))[2]
         for file in filenames:
             try:
                 if file.startswith("ADD_"):
-                    await bot.unload_extension(f"data.ADDCOMMANDS.{file[:-3]}")
-                    await bot.load_extension(f"data.ADDCOMMANDS.{file[:-3]}")
+                    await bot.unload_extension(f"{ADD}.{file}")
+                    await bot.load_extension(f"{ADD}.{file}")
             except Exception as e:
                 await interaction.response.send_message(f"Error reloading {file}: {e}",ephemeral=True)
                 return
